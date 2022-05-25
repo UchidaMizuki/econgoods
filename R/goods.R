@@ -2,7 +2,7 @@
 goods_by <- function(.data, ...) {
   .data |>
     timbr::forest_by(...) |>
-    dplyr::select(price, amount)
+    dplyr::select(price, quantity)
 }
 
 #' @export
@@ -11,16 +11,16 @@ goods_compose <- function(data, utility,
   data |>
     dplyr::summarise(prices = list(price |>
                                      set_names(timbr::node_value())),
-                     amounts = list(amount |>
-                                      set_names(timbr::node_value())),
+                     quantities = list(quantity |>
+                                         set_names(timbr::node_value())),
                      utility = list(.env$utility),
                      .node = node) |>
     dplyr::rowwise() |>
-    dplyr::mutate(utility = list(util_calibrate(utility, prices, amounts)),
-                  amount = utility(amounts),
-                  price = sum(prices * amounts) / amount) |>
+    dplyr::mutate(utility = list(util_calibrate(utility, prices, quantities)),
+                  quantity = utility(quantities),
+                  price = sum(prices * quantities) / quantity) |>
     dplyr::ungroup() |>
-    dplyr::select(!c(prices, amounts))
+    dplyr::select(!c(prices, quantities))
 }
 
 #' @export
@@ -36,28 +36,28 @@ goods_reprice <- function(.data, ...) {
   .data |>
     purrr::modify(function(x, y) {
       prices <- y$price
-      amounts <- util_demand(x$utility[[1L]], prices,
-                             utility = 1)
-      x$price <- sum(prices * amounts)
+      quantities <- util_demand(x$utility[[1L]], prices,
+                                utility = 1)
+      x$price <- sum(prices * quantities)
       x
     })
 }
 
 #' @export
 goods_produce <- function(.data, ...) {
-  amounts <- list2(...)
+  quantities <- list2(...)
 
-  for (amount in amounts) {
+  for (quantity in quantities) {
     .data <- .data |>
-      dplyr::rows_update(amount,
-                         by = setdiff(names(amount), "amount"))
+      dplyr::rows_update(quantity,
+                         by = setdiff(names(quantity), "quantity"))
   }
 
   .data |>
     purrr::modify(function(x, y) {
-      amounts <- util_demand(y$utility[[1L]], x$price,
-                             utility = 1)
-      x$amount <- y$amount * amounts
+      quantities <- util_demand(y$utility[[1L]], x$price,
+                                utility = 1)
+      x$quantity <- y$quantity * quantities
       x
     },
     .climb = TRUE)
@@ -76,14 +76,14 @@ goods_consume <- function(.data, ...) {
   }
 
   .data |>
-    dplyr::mutate(amount = dplyr::if_else(is.na(income),
-                                          amount,
-                                          income / price)) |>
+    dplyr::mutate(quantity = dplyr::if_else(is.na(income),
+                                            quantity,
+                                            income / price)) |>
     dplyr::select(!income) |>
     purrr::modify(function(x, y) {
-      amounts <- util_demand(y$utility[[1L]], x$price,
-                             utility = 1)
-      x$amount <- y$amount * amounts
+      quantities <- util_demand(y$utility[[1L]], x$price,
+                                utility = 1)
+      x$quantity <- y$quantity * quantities
       x
     },
     .climb = TRUE)
@@ -121,26 +121,26 @@ goods_reprice_recursive <- function(data, f,
 #' @export
 goods_produce_recursive <- function(data, f,
                                     tolerance = 1e-12) {
-  amount <- function(data) {
+  quantity <- function(data) {
     out <- data |>
       tibble::as_tibble()
-    out$amount
+    out$quantity
   }
 
-  amount_old <- amount(data)
+  quantity_old <- quantity(data)
 
   repeat {
     data <- data |>
       goods_produce(f(data))
 
-    amount_new <- amount(data)
+    quantity_new <- quantity(data)
 
-    error <- sum(abs(amount_new - amount_old))
+    error <- sum(abs(quantity_new - quantity_old))
 
     if (error < tolerance) {
       break
     } else {
-      amount_old <- amount_new
+      quantity_old <- quantity_new
     }
   }
 
@@ -153,7 +153,7 @@ goods_consume_recursive <- function(data, f,
   income <- function(data) {
     out <- data |>
       tibble::as_tibble()
-    out$price * out$amount
+    out$price * out$quantity
   }
 
   income_old <- income(data)
