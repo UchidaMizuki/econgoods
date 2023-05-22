@@ -13,8 +13,10 @@ goods_compose <- function(data, utility,
                                      set_names(timbr::node_value())),
                      quantities = list(quantity |>
                                          set_names(timbr::node_value())),
-                     utility = list(.env$utility),
                      .node = node) |>
+    dplyr::mutate(utility = ifelse(is_utility(.env$utility),
+                                   list(.env$utility),
+                                   unname(.env$utility[timbr::node_value()]))) |>
     dplyr::rowwise() |>
     dplyr::mutate(utility = list(util_calibrate(utility, prices, quantities)),
                   quantity = utility(quantities),
@@ -34,7 +36,7 @@ goods_reprice <- function(.data, ...) {
   }
 
   .data |>
-    purrr::modify(function(x, y) {
+    timbr::traverse(function(x, y) {
       prices <- y$price
       quantities <- util_demand(x$utility[[1L]], prices,
                                 utility = 1)
@@ -54,7 +56,7 @@ goods_produce <- function(.data, ...) {
   }
 
   .data |>
-    purrr::modify(function(x, y) {
+    timbr::traverse(function(x, y) {
       quantities <- util_demand(y$utility[[1L]], x$price,
                                 utility = 1)
       x$quantity <- y$quantity * quantities
@@ -80,7 +82,7 @@ goods_consume <- function(.data, ...) {
                                             quantity,
                                             income / price)) |>
     dplyr::select(!income) |>
-    purrr::modify(function(x, y) {
+    timbr::traverse(function(x, y) {
       quantities <- util_demand(y$utility[[1L]], x$price,
                                 utility = 1)
       x$quantity <- y$quantity * quantities
@@ -93,8 +95,7 @@ goods_consume <- function(.data, ...) {
 goods_reprice_recursive <- function(data, f,
                                     tolerance = 1e-12) {
   price <- function(data) {
-    out <- data |>
-      tibble::as_tibble()
+    out <- tibble::as_tibble(data)
     out$price
   }
 
@@ -122,8 +123,7 @@ goods_reprice_recursive <- function(data, f,
 goods_produce_recursive <- function(data, f,
                                     tolerance = 1e-12) {
   quantity <- function(data) {
-    out <- data |>
-      tibble::as_tibble()
+    out <- tibble::as_tibble(data)
     out$quantity
   }
 
@@ -151,8 +151,7 @@ goods_produce_recursive <- function(data, f,
 goods_consume_recursive <- function(data, f,
                                     tolerance = 1e-12) {
   income <- function(data) {
-    out <- data |>
-      tibble::as_tibble()
+    out <- tibble::as_tibble(data)
     out$price * out$quantity
   }
 
