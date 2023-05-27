@@ -2,7 +2,16 @@
 goods_by <- function(.data, ...) {
   .data |>
     timbr::forest_by(...) |>
-    dplyr::select(price, quantity)
+    dplyr::select(price, quantity) |>
+    add_goods_class()
+}
+
+#' @importFrom pillar tbl_sum
+#' @export
+tbl_sum.econgoods <- function(x, ...) {
+  out <- NextMethod()
+  names(out)[[1L]] <- "Goods"
+  out
 }
 
 #' @export
@@ -22,20 +31,24 @@ goods_compose <- function(data, utility,
                   quantity = utility(quantities),
                   price = sum(prices * quantities) / quantity) |>
     dplyr::ungroup() |>
-    dplyr::select(!c(prices, quantities))
+    dplyr::select(!c(prices, quantities)) |>
+    add_goods_class()
 }
 
 #' @export
-goods_reprice <- function(.data, ...) {
-  prices <- list2(...)
+goods_reprice <- function(data,
+                          prices = NULL) {
+  if (is.data.frame(prices)) {
+    prices <- list(prices)
+  }
 
   for (price in prices) {
-    .data <- .data |>
+    data <- data |>
       dplyr::rows_update(price,
                          by = setdiff(names(price), "price"))
   }
 
-  .data |>
+  data |>
     timbr::traverse(function(x, y) {
       prices <- y$price
       quantities <- util_demand(x$utility[[1L]], prices,
@@ -46,16 +59,19 @@ goods_reprice <- function(.data, ...) {
 }
 
 #' @export
-goods_produce <- function(.data, ...) {
-  quantities <- list2(...)
+goods_produce <- function(data,
+                          quantities = NULL) {
+  if (is.data.frame(quantities)) {
+    quantities <- list(quantities)
+  }
 
   for (quantity in quantities) {
-    .data <- .data |>
+    data <- data |>
       dplyr::rows_update(quantity,
                          by = setdiff(names(quantity), "quantity"))
   }
 
-  .data |>
+  data |>
     timbr::traverse(function(x, y) {
       quantities <- util_demand(y$utility[[1L]], x$price,
                                 utility = 1)
@@ -66,18 +82,22 @@ goods_produce <- function(.data, ...) {
 }
 
 #' @export
-goods_consume <- function(.data, ...) {
-  incomes <- list2(...)
-  .data <- .data |>
+goods_consume <- function(data,
+                          incomes = NULL) {
+  if (is.data.frame(incomes)) {
+    incomes <- list(incomes)
+  }
+
+  data <- data |>
     dplyr::mutate(income = NA_real_)
 
   for (income in incomes) {
-    .data <- .data |>
+    data <- data |>
       dplyr::rows_update(income,
                          by = setdiff(names(income), "income"))
   }
 
-  .data |>
+  data |>
     dplyr::mutate(quantity = dplyr::if_else(is.na(income),
                                             quantity,
                                             income / price)) |>
@@ -115,7 +135,6 @@ goods_reprice_recursive <- function(data, f,
       price_old <- price_new
     }
   }
-
   data
 }
 
@@ -143,7 +162,6 @@ goods_produce_recursive <- function(data, f,
       quantity_old <- quantity_new
     }
   }
-
   data
 }
 
@@ -171,6 +189,5 @@ goods_consume_recursive <- function(data, f,
       income_old <- income_new
     }
   }
-
   data
 }

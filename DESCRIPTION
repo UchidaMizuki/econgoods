@@ -9,8 +9,11 @@ Description: More about what it does (maybe more than one line)
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.3
 Imports: 
     econutil,
+    ggraph,
+    pillar,
     purrr,
-    timbr
+    tidygraph,
+    timbr (>= 0.2.2.9000)
