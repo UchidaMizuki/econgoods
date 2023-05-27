@@ -3,15 +3,15 @@
 as_tbl_graph.econgoods <- function(x, ...) {
   x$nodes <- x$nodes |>
     dplyr::rowwise() |>
-    dplyr::mutate(utility_type = ifelse(is.null(utility),
+    dplyr::mutate(utility_type = ifelse(is.null(.data$utility),
                                         NA_character_,
-                                        pillar::type_sum(utility)),
-                  utility_substitution = utility$substitution %||% NA_real_,
-                  utility_efficiency = utility$efficiency %||% NA_real_) |>
+                                        pillar::type_sum(.data$utility)),
+                  utility_substitution = .data$utility$substitution %||% NA_real_,
+                  utility_efficiency = .data$utility$efficiency %||% NA_real_) |>
     dplyr::ungroup()
   out <- x |>
     dplyr::mutate(utility_weight = NA_real_) |>
-    traverse(\(x, y) {
+    timbr::traverse(\(x, y) {
       x |>
         dplyr::mutate(utility_weight = unname(y$utility[[1L]]$weights))
     },

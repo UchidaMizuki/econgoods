@@ -2,7 +2,7 @@
 goods_by <- function(.data, ...) {
   .data |>
     timbr::forest_by(...) |>
-    dplyr::select(price, quantity) |>
+    dplyr::select("price", "quantity") |>
     add_goods_class()
 }
 
@@ -18,20 +18,20 @@ tbl_sum.econgoods <- function(x, ...) {
 goods_compose <- function(data, utility,
                           node = NULL) {
   data |>
-    dplyr::summarise(prices = list(price |>
+    dplyr::summarise(prices = list(.data$price |>
                                      set_names(timbr::node_value())),
-                     quantities = list(quantity |>
+                     quantities = list(.data$quantity |>
                                          set_names(timbr::node_value())),
                      .node = node) |>
     dplyr::mutate(utility = ifelse(is_utility(.env$utility),
                                    list(.env$utility),
                                    unname(.env$utility[timbr::node_value()]))) |>
     dplyr::rowwise() |>
-    dplyr::mutate(utility = list(util_calibrate(utility, prices, quantities)),
-                  quantity = utility(quantities),
-                  price = sum(prices * quantities) / quantity) |>
+    dplyr::mutate(utility = list(util_calibrate(.data$utility, .data$prices, .data$quantities)),
+                  quantity = .data$utility(.data$quantities),
+                  price = sum(.data$prices * .data$quantities) / .data$quantity) |>
     dplyr::ungroup() |>
-    dplyr::select(!c(prices, quantities)) |>
+    dplyr::select(!c("prices", "quantities")) |>
     add_goods_class()
 }
 
@@ -98,9 +98,9 @@ goods_consume <- function(data,
   }
 
   data |>
-    dplyr::mutate(quantity = dplyr::if_else(is.na(income),
-                                            quantity,
-                                            income / price)) |>
+    dplyr::mutate(quantity = dplyr::if_else(is.na(.data$income),
+                                            .data$quantity,
+                                            .data$income / .data$price)) |>
     dplyr::select(!income) |>
     timbr::traverse(function(x, y) {
       quantities <- util_demand(y$utility[[1L]], x$price,
