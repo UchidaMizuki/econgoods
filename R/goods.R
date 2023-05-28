@@ -113,7 +113,7 @@ goods_consume <- function(data,
 
 #' @export
 goods_reprice_recursive <- function(data, f,
-                                    tolerance = 1e-12) {
+                                    tolerance = 1e-9) {
   price <- function(data) {
     out <- tibble::as_tibble(data)
     out$price
@@ -140,7 +140,7 @@ goods_reprice_recursive <- function(data, f,
 
 #' @export
 goods_produce_recursive <- function(data, f,
-                                    tolerance = 1e-12) {
+                                    tolerance = 1e-9) {
   quantity <- function(data) {
     out <- tibble::as_tibble(data)
     out$quantity
@@ -167,7 +167,7 @@ goods_produce_recursive <- function(data, f,
 
 #' @export
 goods_consume_recursive <- function(data, f,
-                                    tolerance = 1e-12) {
+                                    tolerance = 1e-9) {
   income <- function(data) {
     out <- tibble::as_tibble(data)
     out$price * out$quantity
