@@ -35,22 +35,28 @@ as_tbl_graph.econgoods <- function(x, ...) {
 
 #' @importFrom ggraph autograph
 #' @export
-autograph.econgoods <- function(graph, ...) {
+autograph.econgoods <- function(graph,
+                                edge_colour = "gray",
+                                label_size = 3, ...) {
   as_tbl_graph(graph) |>
     tidygraph::activate("nodes") |>
-    dplyr::mutate(label_utility = dplyr::case_when(is.na(.data$utility_type) ~ "",
+    dplyr::mutate(label_goods = paste0(.data$.node_value, ": ", big_mark(.data$price), " x ", big_mark(.data$quantity)) ,
+                  label_utility = dplyr::case_when(is.na(.data$utility_type) ~ "",
                                                    is.na(.data$utility_substitution) ~ paste0(.data$utility_type, ": ", big_mark(.data$utility_efficiency)),
                                                    TRUE ~ paste0(.data$utility_type, "(", big_mark(.data$utility_substitution), "): ", big_mark(.data$utility_efficiency)))) |>
     # FIXME: Use `layout = "auto"` because the behavior changes when the `layout = "tree"`.
     purrr::quietly(ggraph::ggraph)(layout = "auto") |>
     purrr::chuck("result") +
     ggraph::geom_edge_diagonal(ggplot2::aes(label = big_mark(.data$utility_weight)),
-                               colour = "gray",
+                               edge_colour = edge_colour,
                                angle_calc = "along",
+                               vjust = -0.25,
+                               label_size = label_size,
                                force_flip = FALSE) +
     ggraph::geom_node_label(ggplot2::aes(label = dplyr::if_else(.data$label_utility == "",
-                                                                paste(big_mark(.data$price), "x", big_mark(.data$quantity)),
-                                                                paste(big_mark(.data$price), "x", big_mark(.data$quantity), "/", .data$label_utility))),
+                                                                label_goods,
+                                                                paste0(label_goods, "\n", .data$label_utility))),
+                            size = label_size,
                             hjust = "inward") +
     ggplot2::scale_x_reverse() +
     ggplot2::scale_y_reverse() +
